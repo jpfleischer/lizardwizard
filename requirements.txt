@@ -1,0 +1,3 @@
+pygetwindow
+cloudmesh-common
+docopt
