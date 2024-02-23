@@ -26,3 +26,4 @@ You can use the `down` command to shut down reptilian without having to fiddle w
 ```bash
 lw down
 ```
+Credits: Original shutdown script by Dominik Kapuscinski
