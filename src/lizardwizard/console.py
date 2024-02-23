@@ -1,5 +1,7 @@
 import sys
 from cloudmesh.common.console import Console
+from cloudmesh.common.Shell import Shell
+from cloudmesh.common.util import readfile, writefile, path_expand
 from docopt import docopt
 import pygetwindow as gw
 import subprocess
@@ -14,12 +16,16 @@ Usage:
     lw stop
     lw shutdown
     lw down
+    lw choco
+    lw nat
     lw help
 
 Commands:
     stop      shutdown reptilian
     shutdown  shutdown reptilian
     down      shutdown reptilian
+    choco     automatically install chocolatey
+    nat       setup ssh config
     help      Show this help message
     """
 
@@ -28,6 +34,51 @@ Commands:
         return
 
     args = docopt(doc, version='1.0')
+
+    if args['choco']:
+        
+        Shell.install_chocolatey()
+        Shell.install_choco_package('git.install --params "/GitAndUnixToolsOnPath /Editor:Nano /PseudoConsoleSupport /NoAutoCrlf"')
+        script = """
+env=~/.ssh/agent.env
+
+agent_load_env () { test -f "$env" && . "$env" >| /dev/null ; }
+
+agent_start () {
+    (umask 077; ssh-agent >| "$env")
+    . "$env" >| /dev/null ; }
+
+agent_load_env
+
+# agent_run_state: 0=agent running w/ key; 1=agent w/o key; 2=agent not running
+agent_run_state=$(ssh-add -l >| /dev/null 2>&1; echo $?)
+
+if [ ! "$SSH_AUTH_SOCK" ] || [ $agent_run_state = 2 ]; then
+    agent_start
+    ssh-add
+elif [ "$SSH_AUTH_SOCK" ] && [ $agent_run_state = 1 ]; then
+    ssh-add
+fi
+
+unset env
+        """
+        expanded = path_expand('~/.bashrc')
+        writefile(expanded, script)
+        Console.ok("bashrc should be written")
+
+    if args['nat']:
+        configfile = """
+Host reptilian
+    User reptilian
+    HostName 127.0.0.1
+    Port 3022
+    IdentityFile ~/.ssh/id_rsa
+        """
+        # append to the file.
+        config_path = path_expand("~/.ssh/config")
+        with open(config_path, 'a') as f:
+            f.write(configfile)
+        Console.ok("ssh config should be written")
 
     if args['stop'] or args['shutdown'] or args['down']:
         windows = gw.getAllTitles()

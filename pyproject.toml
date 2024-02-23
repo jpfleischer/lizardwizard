@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "lizardwizard"
-version = "0.1.4"
+version = "0.1.7"
 description = "A package to ease the use of the Reptilian operating system at the University of Florida."
 authors = ["Jacques Fleischer <jacquespfleischer@gmail.com>"]
 readme = "README.md"
@@ -28,6 +28,8 @@ python = "^3.8"
 pygetwindow = "^0.0.9"
 cloudmesh-common = "^5.0.58"
 docopt = "^0.6.2"
+setuptools = "^69.1.0"
+wheel = "^0.42.0"
 
 [tool.poetry.dev-dependencies]
 
