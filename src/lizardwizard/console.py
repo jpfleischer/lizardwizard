@@ -2,6 +2,7 @@ import sys
 from cloudmesh.common.console import Console
 from cloudmesh.common.Shell import Shell
 from cloudmesh.common.util import readfile, writefile, path_expand
+from cloudmesh.common.systeminfo import os_is_windows, os_is_mac
 from docopt import docopt
 import pygetwindow as gw
 import subprocess
@@ -93,35 +94,69 @@ Host reptilian
 
                 Console.info(f"Shutting down {vm_name}...")
 
-                powershell_script = fr"""
-                # Set the VM name
-                $vmName = "{vm_name}"
-                
-                # VBoxManage dir
-                cd "C:\Program Files\Oracle\VirtualBox"
-                
-                # Enter (wake machine)
-                .\VBoxManage controlvm $vmName keyboardputscancode 1c 9c
-                
-                # Wait for 2 seconds
-                Start-Sleep -Seconds 2
-                
-                # Send CTRL+ALT+DEL
-                .\VBoxManage controlvm $vmName keyboardputscancode 1d 38 53 9d b8 d3
-                
-                # Wait for 4 seconds
-                Start-Sleep -Seconds 4
-                
-                # Send Tab (select shutdown)
-                .\VBoxManage controlvm $vmName keyboardputscancode 0f 8f
-                
-                # Wait for 2 seconds
-                Start-Sleep -Seconds 2
-                
-                # Send Enter (shutdown)
-                .\VBoxManage controlvm $vmName keyboardputscancode 1c 9c
-                """
-                subprocess.run(["powershell", "-Command", powershell_script], check=True)
+                if os_is_windows():
+
+                    powershell_script = fr"""
+                    # Set the VM name
+                    $vmName = "{vm_name}"
+                    
+                    # VBoxManage dir
+                    cd "C:\Program Files\Oracle\VirtualBox"
+                    
+                    # Enter (wake machine)
+                    .\VBoxManage controlvm $vmName keyboardputscancode 1c 9c
+                    
+                    # Wait for 2 seconds
+                    Start-Sleep -Seconds 2
+                    
+                    # Send CTRL+ALT+DEL
+                    .\VBoxManage controlvm $vmName keyboardputscancode 1d 38 53 9d b8 d3
+                    
+                    # Wait for 4 seconds
+                    Start-Sleep -Seconds 4
+                    
+                    # Send Tab (select shutdown)
+                    .\VBoxManage controlvm $vmName keyboardputscancode 0f 8f
+                    
+                    # Wait for 2 seconds
+                    Start-Sleep -Seconds 2
+                    
+                    # Send Enter (shutdown)
+                    .\VBoxManage controlvm $vmName keyboardputscancode 1c 9c
+                    """
+                    subprocess.run(["powershell", "-Command", powershell_script], check=True)
+
+                elif os_is_mac():
+                    
+                    bash_script = f"""
+                    # Set the VM name
+                    vmName="{vm_name}"
+                    
+                    # VBoxManage dir
+                    cd "/Applications/VirtualBox.app/Contents/MacOS"
+                    
+                    # Enter (wake machine)
+                    ./VBoxManage controlvm "$vmName" keyboardputscancode 1c 9c
+                    
+                    # Wait for 2 seconds
+                    sleep 2
+                    
+                    # Send CTRL+ALT+DEL
+                    ./VBoxManage controlvm "$vmName" keyboardputscancode 1d 38 53 9d b8 d3
+                    
+                    # Wait for 4 seconds
+                    sleep 4
+                    
+                    # Send Tab (select shutdown)
+                    ./VBoxManage controlvm "$vmName" keyboardputscancode 0f 8f
+                    
+                    # Wait for 2 seconds
+                    sleep 2
+                    
+                    # Send Enter (shutdown)
+                    ./VBoxManage controlvm "$vmName" keyboardputscancode 1c 9c
+                    """
+                    subprocess.run(["/bin/bash", "-c", bash_script], check=True)
         else:
             Console.error("No VM running!")
 
