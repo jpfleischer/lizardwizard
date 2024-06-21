@@ -172,7 +172,9 @@ Host reptilian
             # Send Enter (shutdown)
             ./VBoxManage controlvm "$vmName" keyboardputscancode 1c 9c
             """
-            subprocess.run(["/bin/bash", "-c", bash_script], check=True)
+            print('before subprocess')
+            subprocess.run(bash_script, shell=True, check=True, executable="/bin/bash")
+            print('after subprocess')
 
 
 if __name__ == "__main__":
