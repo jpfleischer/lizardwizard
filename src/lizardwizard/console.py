@@ -2,9 +2,12 @@ import sys
 from cloudmesh.common.console import Console
 from cloudmesh.common.Shell import Shell
 from cloudmesh.common.util import readfile, writefile, path_expand
+from cloudmesh.common.systeminfo import os_is_windows, os_is_mac
 from docopt import docopt
 import pygetwindow as gw
 import subprocess
+import re
+
 
 def main():
     doc = """
@@ -81,49 +84,98 @@ Host reptilian
         Console.ok("ssh config should be written")
 
     if args['stop'] or args['shutdown'] or args['down']:
-        windows = gw.getAllTitles()
-        running = any('Oracle VM VirtualBox' in title for title in windows)
-        if running:
-            # Find the window with 'Oracle VM VirtualBox' in the title, excluding 'Oracle VM VirtualBox Manager'
-            vm_window = next((title for title in windows if 'Oracle VM VirtualBox' in title and title != 'Oracle VM VirtualBox Manager'), None)
+        if os_is_windows():
 
-            if vm_window is not None:
-                # Find the first instance of " (" and use everything before it as the VM name
-                vm_name = vm_window.split(" (", 1)[0]
+            windows = gw.getAllTitles()
+            running = any('Oracle VM VirtualBox' in title for title in windows)
+            if running:
+                # Find the window with 'Oracle VM VirtualBox' in the title, excluding 'Oracle VM VirtualBox Manager'
+                vm_window = next((title for title in windows if 'Oracle VM VirtualBox' in title and title != 'Oracle VM VirtualBox Manager'), None)
 
-                Console.info(f"Shutting down {vm_name}...")
+                if vm_window is not None:
+                    # Find the first instance of " (" and use everything before it as the VM name
+                    vm_name = vm_window.split(" (", 1)[0]
 
-                powershell_script = fr"""
-                # Set the VM name
-                $vmName = "{vm_name}"
-                
-                # VBoxManage dir
-                cd "C:\Program Files\Oracle\VirtualBox"
-                
-                # Enter (wake machine)
-                .\VBoxManage controlvm $vmName keyboardputscancode 1c 9c
-                
-                # Wait for 2 seconds
-                Start-Sleep -Seconds 2
-                
-                # Send CTRL+ALT+DEL
-                .\VBoxManage controlvm $vmName keyboardputscancode 1d 38 53 9d b8 d3
-                
-                # Wait for 4 seconds
-                Start-Sleep -Seconds 4
-                
-                # Send Tab (select shutdown)
-                .\VBoxManage controlvm $vmName keyboardputscancode 0f 8f
-                
-                # Wait for 2 seconds
-                Start-Sleep -Seconds 2
-                
-                # Send Enter (shutdown)
-                .\VBoxManage controlvm $vmName keyboardputscancode 1c 9c
-                """
-                subprocess.run(["powershell", "-Command", powershell_script], check=True)
-        else:
-            Console.error("No VM running!")
+                    Console.info(f"Shutting down {vm_name}...")
+
+
+                    powershell_script = fr"""
+                    # Set the VM name
+                    $vmName = "{vm_name}"
+                    
+                    # VBoxManage dir
+                    cd "C:\Program Files\Oracle\VirtualBox"
+                    
+                    # Enter (wake machine)
+                    .\VBoxManage controlvm $vmName keyboardputscancode 1c 9c
+                    
+                    # Wait for 2 seconds
+                    Start-Sleep -Seconds 2
+                    
+                    # Send CTRL+ALT+DEL
+                    .\VBoxManage controlvm $vmName keyboardputscancode 1d 38 53 9d b8 d3
+                    
+                    # Wait for 4 seconds
+                    Start-Sleep -Seconds 4
+                    
+                    # Send Tab (select shutdown)
+                    .\VBoxManage controlvm $vmName keyboardputscancode 0f 8f
+                    
+                    # Wait for 2 seconds
+                    Start-Sleep -Seconds 2
+                    
+                    # Send Enter (shutdown)
+                    .\VBoxManage controlvm $vmName keyboardputscancode 1c 9c
+                    """
+                    subprocess.run(["powershell", "-Command", powershell_script], check=True)
+
+                    
+            else:
+                Console.error("No VM running!")
+                quit()
+
+        elif os_is_mac():
+            r = Shell.run("cd /Applications/VirtualBox.app/Contents/MacOS ; ./VBoxManage list runningvms")
+            
+            match = re.search(r'"(.*?)"', r)
+            if match:
+                name = match.group(1)
+            else:
+                Console.error("No VM running!")
+                quit()
+            
+            bash_script = f"""
+            # Set the VM name
+            vmName="{name}"
+            
+            # VBoxManage dir
+            cd "/Applications/VirtualBox.app/Contents/MacOS"
+            
+            # Enter (wake machine)
+            ./VBoxManage controlvm "$vmName" keyboardputscancode 1c 9c
+            
+            # Wait for 2 seconds
+            sleep 2
+            
+            # Send CTRL+ALT+DEL
+            ./VBoxManage controlvm "$vmName" keyboardputscancode 1d 38 53 9d b8 d3
+            
+            # Wait for 4 seconds
+            sleep 4
+            
+            # Send Tab (select shutdown)
+            ./VBoxManage controlvm "$vmName" keyboardputscancode 0f 8f
+            
+            # Wait for 2 seconds
+            sleep 2
+            
+            # Send Enter (shutdown)
+            ./VBoxManage controlvm "$vmName" keyboardputscancode 1c 9c
+            """
+            print('before subprocess')
+            subprocess.run(bash_script, shell=True, check=True, executable="/bin/bash")
+            print('after subprocess')
+
 
 if __name__ == "__main__":
     main()
